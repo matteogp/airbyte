@@ -32,6 +32,7 @@ import io.airbyte.cdk.load.util.deserializeToNode
 import java.io.InputStream
 import java.util.zip.GZIPInputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -50,11 +51,19 @@ class ObjectStorageDataDumper(
     private val parquetMapperPipeline = ParquetMapperPipelineFactory().create(stream)
 
     fun dump(): List<OutputRecord> {
-        val prefix = pathFactory.getFinalDirectory(stream).toString()
+        // Note: this is implicitly a test of the `streamConstant` final directory
+        // and the path matcher, so a failure here might imply a bug in the metadata-based
+        // destination state loader, which lists by `prefix` and filters against the matcher.
+        val prefix =
+            pathFactory.getFinalDirectory(stream, streamConstant = true).toString().takeWhile {
+                it != '$'
+            }
+        val matcher = pathFactory.getPathMatcher(stream)
         return runBlocking {
             withContext(Dispatchers.IO) {
                 client
                     .list(prefix)
+                    .filter { matcher.match(it.key) != null }
                     .map { listedObject: RemoteObject<*> ->
                         client.get(listedObject.key) { objectData: InputStream ->
                             val decompressed =
