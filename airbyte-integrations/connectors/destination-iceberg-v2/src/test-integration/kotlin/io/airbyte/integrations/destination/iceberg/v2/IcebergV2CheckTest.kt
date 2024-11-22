@@ -10,6 +10,9 @@ import io.airbyte.integrations.destination.iceberg.v2.IcebergV2TestUtil.PATH
 
 class IcebergV2CheckTest :
     CheckIntegrationTest<IcebergV2Specification>(
+        // TODO this will also depend on NessieTestContainers
+        //   so we probably should make CheckTestConfig accept configContents
+        //   instead of path
         successConfigFilenames = listOf(CheckTestConfig(PATH)),
         // TODO we maybe should add some configs that are expected to fail `check`
         failConfigFilenamesAndFailureReasons = mapOf(),
